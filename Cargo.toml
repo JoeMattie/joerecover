@@ -1,0 +1,14 @@
+[package]
+name = "joerecover"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+bip39 = "2.0"
+bitcoin = "0.29"
+secp256k1 = "0.24"
+hex = "0.4"
+clap = "4.0"
+memmap2 = "0.9"
+ripemd = "0.1"
+sha2 = "0.10"
