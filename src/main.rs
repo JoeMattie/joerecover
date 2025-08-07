@@ -379,9 +379,10 @@ fn process_seed_phrase_streaming(
     
     let derivation_paths = [&paths.legacy, &paths.segwit_compat, &paths.native_segwit];
     
-    for i in 0..10 {
+    // for i in 0..10 {
         for (path_idx, base_path) in derivation_paths.iter().enumerate() {
-            let child_path = base_path.child(ChildNumber::from_normal_idx(i)?);
+            // let child_path = base_path.child(ChildNumber::from_normal_idx(i)?);
+            let child_path = base_path.child(ChildNumber::from_normal_idx(0)?);
             let derived_key = master_key.derive_priv(secp, &child_path)?;
             let public_key = PublicKey::from_private_key(secp, &derived_key.to_priv());
             
@@ -425,7 +426,7 @@ fn process_seed_phrase_streaming(
                 let _ = sender.try_send(address.to_string());
             }
         }
-    }
+    // }
     Ok(())
 }
 
