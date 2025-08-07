@@ -380,7 +380,31 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     for line in lines {
         match line {
             Ok(phrase) => {
-                if !phrase.trim().is_empty() {
+                let trimmed = phrase.trim();
+                
+                // Check for done signal
+                if trimmed == "***DONE***" {
+                    eprintln!("\n🏁 Received DONE signal - finishing up...");
+                    
+                    // Print final summary
+                    let final_processed = *processed_count.lock().unwrap();
+                    let final_found = *found_count.lock().unwrap();
+                    let elapsed = start_time.elapsed();
+                    let rate = final_processed as f64 / elapsed.as_secs_f64();
+                    
+                    eprintln!("📊 FINAL SUMMARY:");
+                    eprintln!("   Processed: {} seed phrases", final_processed);
+                    eprintln!("   Found: {} matches", final_found);
+                    eprintln!("   Runtime: {:.2} seconds", elapsed.as_secs_f64());
+                    eprintln!("   Average rate: {:.0} phrases/sec", rate);
+                    if final_found > 0 {
+                        eprintln!("   Success rate: {:.6}%", (final_found as f64 / final_processed as f64) * 100.0);
+                    }
+                    eprintln!("✅ Processing complete!");
+                    break;
+                }
+                
+                if !trimmed.is_empty() {
                     if phrase_sender.send(phrase).is_err() {
                         break; // Workers have stopped
                     }
