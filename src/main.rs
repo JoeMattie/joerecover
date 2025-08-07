@@ -17,6 +17,8 @@ use bitcoin::{
 use std::str::FromStr;
 use clap::{Arg, Command};
 use memmap2::MmapOptions;
+use reqwest;
+use serde_json;
 
 
 const HEADER_LEN: usize = 65536;
@@ -142,6 +144,37 @@ impl AddressDb {
     }
 }
 
+// Function to send Slack notification
+async fn send_slack_notification(webhook_url: &str, seed_phrase: &str) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    let client = reqwest::Client::new();
+    let payload = serde_json::json!({
+        "text": seed_phrase
+    });
+    
+    let response = client
+        .post(webhook_url)
+        .header("Content-Type", "application/json")
+        .json(&payload)
+        .send()
+        .await?;
+    
+    if response.status().is_success() {
+        eprintln!("✅ Seed phrase sent to Slack successfully");
+    } else {
+        eprintln!("❌ Failed to send to Slack: {}", response.status());
+    }
+    
+    Ok(())
+}
+
+// Blocking wrapper for Slack notification
+fn send_slack_notification_blocking(webhook_url: &str, seed_phrase: &str) {
+    let rt = tokio::runtime::Runtime::new().unwrap();
+    if let Err(e) = rt.block_on(send_slack_notification(webhook_url, seed_phrase)) {
+        eprintln!("Error sending Slack notification: {}", e);
+    }
+}
+
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let matches = Command::new("joerecover")
         .about("Generate Bitcoin addresses from BIP39 seed phrases and optionally check against addressdb")
@@ -156,6 +189,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             .value_name("NUM")
             .help("Number of worker threads")
             .default_value("8"))
+        .arg(Arg::new("slack-webhook")
+            .long("slack-webhook")
+            .value_name("URL")
+            .help("Slack webhook URL to send found seed phrases")
+            .required(false))
 
         .get_matches();
 
@@ -164,6 +202,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     } else {
         None
     };
+
+    let slack_webhook_url = matches.get_one::<String>("slack-webhook").cloned();
+    let slack_webhook_url = Arc::new(slack_webhook_url);
 
     let num_threads: usize = matches.get_one::<String>("threads")
         .unwrap()
@@ -271,7 +312,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     });
 
-    // Spawn thread to write found seed phrases to file
+    // Spawn thread to write found seed phrases to file and send Slack notifications
+    let slack_webhook = slack_webhook_url.clone();
     let found_writer_thread = thread::spawn(move || {
         let mut found_file = match OpenOptions::new()
             .create(true)
@@ -285,6 +327,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         };
 
         while let Ok(phrase) = found_phrase_receiver.recv() {
+            // Write to file
             if let Err(e) = writeln!(found_file, "{}", phrase) {
                 eprintln!("Error writing to found.txt: {}", e);
             } else {
@@ -292,6 +335,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     eprintln!("Error flushing found.txt: {}", e);
                 }
             }
+            
+            // Send Slack notification if webhook URL is provided
+            if let Some(webhook_url) = slack_webhook.as_ref() {
+                eprintln!("🚀 Found seed phrase! Sending to Slack...");
+                send_slack_notification_blocking(webhook_url, &phrase);
+            }
+            
             // Explicit drop to free memory immediately
             drop(phrase);
         }
