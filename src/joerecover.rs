@@ -307,8 +307,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Spawn output thread
     let output_thread = thread::spawn(move || {
-        while let Ok(address) = result_receiver.recv() {
-            println!("{}", address);
+        while let Ok(json_line) = result_receiver.recv() {
+            // Each line is a JSON object: {"seed_phrase": ..., "address": ...}
+            println!("{}", json_line);
         }
     });
 
@@ -491,13 +492,21 @@ fn process_seed_phrase_streaming(
                 
                 if found {
                     *found_any = true;
-                    // Send immediately without accumulating
-                    let _ = sender.try_send(address.to_string());
+                    // Send structured JSON containing both seed phrase and address
+                    let json_line = serde_json::json!({
+                        "seed_phrase": phrase,
+                        "address": address.to_string()
+                    }).to_string();
+                    let _ = sender.try_send(json_line);
                 }
             } else {
                 *found_any = true;
-                // Send immediately without accumulating
-                let _ = sender.try_send(address.to_string());
+                // Send structured JSON when not using addressdb as well
+                let json_line = serde_json::json!({
+                    "seed_phrase": phrase,
+                    "address": address.to_string()
+                }).to_string();
+                let _ = sender.try_send(json_line);
             }
         }
     // }

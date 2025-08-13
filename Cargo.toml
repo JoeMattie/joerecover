@@ -1,7 +1,29 @@
 [package]
 name = "joerecover"
 version = "0.1.0"
-edition = "2021"
+edition = "2024"
+
+[[bin]]
+name = "joerecover"
+path = "src/joerecover.rs"
+
+[[bin]]
+name = "joegen"
+path = "src/joegen.rs"
+
+[[bin]]
+name = "skipper"
+path = "src/skipper.rs"
+
+[[bin]]
+name = "worker"
+path = "src/worker.rs"
+
+[[bin]]
+name = "test_integration"
+path = "src/bin/test_integration.rs"
+
+
 
 [dependencies]
 bip39 = "2.0"
@@ -13,5 +35,12 @@ memmap2 = "0.9"
 ripemd = "0.1"
 sha2 = "0.10"
 reqwest = { version = "0.11", features = ["json"] }
-tokio = { version = "1.0", features = ["rt", "rt-multi-thread"] }
+tokio = { version = "1.0", features = ["rt", "rt-multi-thread", "macros"] }
 serde_json = "1.0"
+serde = { version = "1.0", features = ["derive"] }
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1
+panic = "abort"

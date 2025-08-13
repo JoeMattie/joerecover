@@ -1,0 +1,25 @@
+{
+  "name": "work-server",
+  "module": "server.js",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "start": "bun run server.js",
+    "dev": "bun --watch run server.js",
+    "test": "bun run run-tests.js",
+    "test:api": "bun run-tests.js api",
+    "test:expansion": "bun run-tests.js expansion",
+    "test:job": "bun run-tests.js job",
+    "test:found": "bun run-tests.js found",
+    "test:ui": "bun run-tests.js ui"
+  },
+  "devDependencies": {
+    "@types/bun": "latest"
+  },
+  "peerDependencies": {
+    "typescript": "^5"
+  },
+  "dependencies": {
+    "hono": "^4.9.1"
+  }
+}
